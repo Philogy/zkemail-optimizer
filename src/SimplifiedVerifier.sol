@@ -4,8 +4,7 @@ pragma solidity ^0.8.17;
 contract SimplifiedVerifier {
     function verify(uint256 pubInput, bytes calldata proof) external view returns (bool) {
         assembly {
-            let success := 1
-
+            let success := eq(proof.offset, 0x64)
             mstore(0x00, 0)
             mstore(0x20, 0)
             mstore(0x40, 0)
@@ -32,12 +31,12 @@ contract SimplifiedVerifier {
             mstore(0x20, mod(pubInput, f_q))
             mstore(0x0, 16862821262208322703466561719716444257389063586399614493569820820822613390473)
 
-            for { let ptr := 0x0 } lt(ptr, 0xd40) { ptr := add(ptr, 0x40) } {
-                let x := calldataload(add(proof.offset, ptr))
-                let y := calldataload(add(proof.offset, add(ptr, 0x20)))
+            for { let ptr := 0x64 } lt(ptr, 0xda4) { ptr := add(ptr, 0x40) } {
+                let x := calldataload(ptr)
+                let y := calldataload(add(ptr, 0x20))
                 success := and(validate_ec_point(x, y), success)
             }
-            calldatacopy(0x40, add(proof.offset, 0x0), 0xd40)
+            calldatacopy(0x40, 0xc8, 0xd40)
             mstore(0xd80, keccak256(0x0, 3456))
             {
                 let hash := mload(0xd80)
@@ -45,12 +44,12 @@ contract SimplifiedVerifier {
                 mstore(0xdc0, hash)
             }
 
-            for { let ptr := 0xd40 } lt(ptr, 0x1840) { ptr := add(ptr, 0x40) } {
-                let x := calldataload(add(proof.offset, ptr))
-                let y := calldataload(add(proof.offset, add(ptr, 0x20)))
+            for { let ptr := 0xda4 } lt(ptr, 0x18a4) { ptr := add(ptr, 0x40) } {
+                let x := calldataload(ptr)
+                let y := calldataload(add(ptr, 0x20))
                 success := and(validate_ec_point(x, y), success)
             }
-            calldatacopy(0xde0, add(proof.offset, 0xd40), 0xb00)
+            calldatacopy(0xde0, 0xe08, 0xb00)
             mstore(0x18e0, keccak256(0xdc0, 2848))
             {
                 let hash := mload(0x18e0)
@@ -65,12 +64,12 @@ contract SimplifiedVerifier {
                 mstore(0x1980, hash)
             }
 
-            for { let ptr := 0x1840 } lt(ptr, 0x20c0) { ptr := add(ptr, 0x40) } {
-                let x := calldataload(add(proof.offset, ptr))
-                let y := calldataload(add(proof.offset, add(ptr, 0x20)))
+            for { let ptr := 0x18a4 } lt(ptr, 0x2124) { ptr := add(ptr, 0x40) } {
+                let x := calldataload(ptr)
+                let y := calldataload(add(ptr, 0x20))
                 success := and(validate_ec_point(x, y), success)
             }
-            calldatacopy(0x19a0, add(proof.offset, 0x1840), 0x880)
+            calldatacopy(0x19a0, 0x1908, 0x880)
             mstore(0x2220, keccak256(0x1980, 2208))
             {
                 let hash := mload(0x2220)
@@ -78,12 +77,12 @@ contract SimplifiedVerifier {
                 mstore(0x2260, hash)
             }
 
-            for { let ptr := 0x20c0 } lt(ptr, 0x2200) { ptr := add(ptr, 0x40) } {
-                let x := calldataload(add(proof.offset, ptr))
-                let y := calldataload(add(proof.offset, add(ptr, 0x20)))
+            for { let ptr := 0x2124 } lt(ptr, 0x2264) { ptr := add(ptr, 0x40) } {
+                let x := calldataload(ptr)
+                let y := calldataload(add(ptr, 0x20))
                 success := and(validate_ec_point(x, y), success)
             }
-            calldatacopy(0x2280, add(proof.offset, 0x20c0), 0x140)
+            calldatacopy(0x2280, 0x2188, 0x140)
             mstore(0x23c0, keccak256(0x2260, 352))
             {
                 let hash := mload(0x23c0)
@@ -92,10 +91,10 @@ contract SimplifiedVerifier {
             }
 
             for {
-                let ptr := add(proof.offset, 0x2200)
-                let endPtr := add(ptr, 0x2f20)
+                let ptr := 0x2264
+                let endPtr := 0x5184
             } lt(ptr, endPtr) { ptr := add(ptr, 0x20) } { success := and(success, lt(calldataload(ptr), f_q)) }
-            calldatacopy(0x2420, add(proof.offset, 0x2200), 0x2f20)
+            calldatacopy(0x2420, 0x2264, 0x2f20)
             mstore(0x5340, keccak256(0x2400, 12096))
             {
                 let hash := mload(0x5340)
@@ -110,12 +109,12 @@ contract SimplifiedVerifier {
                 mstore(0x53e0, hash)
             }
 
-            for { let ptr := 0x5120 } lt(ptr, 0x5160) { ptr := add(ptr, 0x40) } {
-                let x := calldataload(add(proof.offset, ptr))
-                let y := calldataload(add(proof.offset, add(ptr, 0x20)))
+            for { let ptr := 0x5184 } lt(ptr, 0x51c4) { ptr := add(ptr, 0x40) } {
+                let x := calldataload(ptr)
+                let y := calldataload(add(ptr, 0x20))
                 success := and(validate_ec_point(x, y), success)
             }
-            calldatacopy(0x5400, add(proof.offset, 0x5120), 0x40)
+            calldatacopy(0x5400, 0x51e8, 0x40)
             mstore(0x5440, keccak256(0x53e0, 96))
             {
                 let hash := mload(0x5440)
@@ -123,12 +122,12 @@ contract SimplifiedVerifier {
                 mstore(0x5480, hash)
             }
 
-            for { let ptr := 0x5160 } lt(ptr, 0x51a0) { ptr := add(ptr, 0x40) } {
-                let x := calldataload(add(proof.offset, ptr))
-                let y := calldataload(add(proof.offset, add(ptr, 0x20)))
+            for { let ptr := 0x51c4 } lt(ptr, 0x5204) { ptr := add(ptr, 0x40) } {
+                let x := calldataload(ptr)
+                let y := calldataload(add(ptr, 0x20))
                 success := and(validate_ec_point(x, y), success)
             }
-            calldatacopy(0x54a0, add(proof.offset, 0x5160), 0x40)
+            calldatacopy(0x54a0, 0x5228, 0x40)
             mstore(0x54e0, mulmod(mload(0x23e0), mload(0x23e0), f_q))
             mstore(0x5500, mulmod(mload(0x54e0), mload(0x54e0), f_q))
             mstore(0x5520, mulmod(mload(0x5500), mload(0x5500), f_q))
@@ -262,7 +261,7 @@ contract SimplifiedVerifier {
             mstore(0x5b00, 32)
             mstore(0x5b20, mload(0x5a80))
             mstore(0x5b40, 21888242871839275222246405745257275088548364400416034343698204186575808495615)
-            mstore(0x5b60, 21888242871839275222246405745257275088548364400416034343698204186575808495617)
+            mstore(0x5b60, f_q)
             success := and(eq(staticcall(gas(), 0x5, 0x5ac0, 0xc0, 0x5aa0, 0x20), 1), success)
             {
                 let inv := mload(0x5aa0)
@@ -423,39 +422,19 @@ contract SimplifiedVerifier {
             mstore(0x6b00, mulmod(mload(0x6ae0), mload(0x6ac0), f_q))
             mstore(0x6b20, addmod(mload(0x6aa0), mload(0x6b00), f_q))
             mstore(0x6b40, mulmod(mload(0x2240), mload(0x6b20), f_q))
-            mstore(
-                0x6b60,
-                addmod(
-                    mload(0x2dc0), 21888242871839275222246405745257275088548364400416034343698204186575808495617, f_q
-                )
-            )
+            mstore(0x6b60, addmod(mload(0x2dc0), f_q, f_q))
             mstore(0x6b80, mulmod(mload(0x6b60), mload(0x6ac0), f_q))
             mstore(0x6ba0, addmod(mload(0x6b40), mload(0x6b80), f_q))
             mstore(0x6bc0, mulmod(mload(0x2240), mload(0x6ba0), f_q))
-            mstore(
-                0x6be0,
-                addmod(
-                    mload(0x2de0), 21888242871839275222246405745257275088548364400416034343698204186575808495617, f_q
-                )
-            )
+            mstore(0x6be0, addmod(mload(0x2de0), f_q, f_q))
             mstore(0x6c00, mulmod(mload(0x6be0), mload(0x6ac0), f_q))
             mstore(0x6c20, addmod(mload(0x6bc0), mload(0x6c00), f_q))
             mstore(0x6c40, mulmod(mload(0x2240), mload(0x6c20), f_q))
-            mstore(
-                0x6c60,
-                addmod(
-                    mload(0x2e00), 21888242871839275222246405745257275088548364400416034343698204186575808495617, f_q
-                )
-            )
+            mstore(0x6c60, addmod(mload(0x2e00), f_q, f_q))
             mstore(0x6c80, mulmod(mload(0x6c60), mload(0x6ac0), f_q))
             mstore(0x6ca0, addmod(mload(0x6c40), mload(0x6c80), f_q))
             mstore(0x6cc0, mulmod(mload(0x2240), mload(0x6ca0), f_q))
-            mstore(
-                0x6ce0,
-                addmod(
-                    mload(0x2e20), 21888242871839275222246405745257275088548364400416034343698204186575808495617, f_q
-                )
-            )
+            mstore(0x6ce0, addmod(mload(0x2e20), f_q, f_q))
             mstore(0x6d00, mulmod(mload(0x6ce0), mload(0x6ac0), f_q))
             mstore(0x6d20, addmod(mload(0x6cc0), mload(0x6d00), f_q))
             mstore(0x6d40, mulmod(mload(0x2240), mload(0x6d20), f_q))
@@ -474,30 +453,15 @@ contract SimplifiedVerifier {
             mstore(0x6ee0, mulmod(mload(0x6ec0), mload(0x6ea0), f_q))
             mstore(0x6f00, addmod(mload(0x6e80), mload(0x6ee0), f_q))
             mstore(0x6f20, mulmod(mload(0x2240), mload(0x6f00), f_q))
-            mstore(
-                0x6f40,
-                addmod(
-                    mload(0x2fa0), 21888242871839275222246405745257275088548364400416034343698204186575808495617, f_q
-                )
-            )
+            mstore(0x6f40, addmod(mload(0x2fa0), f_q, f_q))
             mstore(0x6f60, mulmod(mload(0x6f40), mload(0x6ea0), f_q))
             mstore(0x6f80, addmod(mload(0x6f20), mload(0x6f60), f_q))
             mstore(0x6fa0, mulmod(mload(0x2240), mload(0x6f80), f_q))
-            mstore(
-                0x6fc0,
-                addmod(
-                    mload(0x2fc0), 21888242871839275222246405745257275088548364400416034343698204186575808495617, f_q
-                )
-            )
+            mstore(0x6fc0, addmod(mload(0x2fc0), f_q, f_q))
             mstore(0x6fe0, mulmod(mload(0x6fc0), mload(0x6ea0), f_q))
             mstore(0x7000, addmod(mload(0x6fa0), mload(0x6fe0), f_q))
             mstore(0x7020, mulmod(mload(0x2240), mload(0x7000), f_q))
-            mstore(
-                0x7040,
-                addmod(
-                    mload(0x2fe0), 21888242871839275222246405745257275088548364400416034343698204186575808495617, f_q
-                )
-            )
+            mstore(0x7040, addmod(mload(0x2fe0), f_q, f_q))
             mstore(0x7060, mulmod(mload(0x7040), mload(0x6ea0), f_q))
             mstore(0x7080, addmod(mload(0x7020), mload(0x7060), f_q))
             mstore(0x70a0, mulmod(mload(0x2240), mload(0x7080), f_q))
@@ -2386,7 +2350,7 @@ contract SimplifiedVerifier {
             mstore(0x12760, 32)
             mstore(0x12780, mload(0x126e0))
             mstore(0x127a0, 21888242871839275222246405745257275088548364400416034343698204186575808495615)
-            mstore(0x127c0, 21888242871839275222246405745257275088548364400416034343698204186575808495617)
+            mstore(0x127c0, f_q)
             success := and(eq(staticcall(gas(), 0x5, 0x12720, 0xc0, 0x12700, 0x20), 1), success)
             {
                 let inv := mload(0x12700)
@@ -2506,7 +2470,7 @@ contract SimplifiedVerifier {
             mstore(0x12a40, 32)
             mstore(0x12a60, mload(0x129c0))
             mstore(0x12a80, 21888242871839275222246405745257275088548364400416034343698204186575808495615)
-            mstore(0x12aa0, 21888242871839275222246405745257275088548364400416034343698204186575808495617)
+            mstore(0x12aa0, f_q)
             success := and(eq(staticcall(gas(), 0x5, 0x12a00, 0xc0, 0x129e0, 0x20), 1), success)
             {
                 let inv := mload(0x129e0)
