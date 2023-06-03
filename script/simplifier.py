@@ -154,6 +154,37 @@ def remove_transcript_var(src_code):
     )
 
 
+def summarize_simple_range_checks(src_code):
+    range_check_pattern = r'mstore\(0x([0-9a-f]+), mod\(calldataload\(add\(proof.offset, 0x([0-9a-f]+)\)\), f_q\)\)'
+    blocks_pattern = snippet_to_pattern(r'(' + range_check_pattern + r'\s*)+')
+    range_check_blocks = [*re.finditer(blocks_pattern, src_code)]
+    assert len(range_check_blocks) == 1, 'Expected only 1 range check group'
+
+    def replace_block(block: re.Match) -> str:
+        range_checks = [
+            *re.finditer(range_check_pattern, block.group(0))
+        ]
+        for a, b in zip(range_checks[:-1], range_checks[1:]):
+            a1, a2 = hexs_to_ints(a.groups())
+            b1, b2 = hexs_to_ints(b.groups())
+            assert a1 + 0x20 == b1
+            assert a2 + 0x20 == b2
+
+        start_mem, start_cd = hexs_to_ints(range_checks[0].groups())
+
+        return f'''
+            for {{
+                let ptr := add(proof.offset, 0x{start_cd:x})
+                let endPtr := add(ptr, 0x{0x20 * len(range_checks):x})
+            }} lt(ptr, endPtr) {{ ptr := add(ptr, 0x20)}} {{
+                success := and(success, lt(calldataload(ptr), f_q))
+            }}
+            calldatacopy(0x{start_mem:x}, add(proof.offset, 0x{start_cd:x}), 0x{0x20 * len(range_checks):x})
+        '''
+
+    return re.sub(blocks_pattern, replace_block, src_code)
+
+
 NAME = 'SimplifiedVerifier'
 
 
@@ -184,6 +215,7 @@ def main():
     src_code = proof_mem_to_calldata(src_code)
     src_code = summarize_validate_point_blocks(src_code)
     src_code = remove_transcript_var(src_code)
+    src_code = summarize_simple_range_checks(src_code)
 
     target_fp = f'src/{NAME}.sol'
     with open(target_fp, 'w') as f:
