@@ -146,6 +146,14 @@ def summarize_validate_point_blocks(src_code):
     )
 
 
+def remove_transcript_var(src_code):
+    return re.sub(
+        r'add\(transcript, (0x[0-9a-f]+)\)',
+        lambda m: m.group(1),
+        src_code
+    )
+
+
 NAME = 'SimplifiedVerifier'
 
 
@@ -158,12 +166,24 @@ def main():
     src_code = safe_replace(src_code, 'VerifierApp', NAME)
     # Optimize start/end
     src_code = safe_replace(src_code, 'public', 'external')
+    src_code = remove(src_code, 'bytes32[5707] memory transcript;')
+    src_code = insert_after(
+        src_code,
+        ASM_START,
+        '''
+            mstore(0x00, 0)
+            mstore(0x20, 0)
+            mstore(0x40, 0)
+            mstore(0x60, 0)
+        '''
+    )
     src_code = simplify_pub_inputs(src_code)
     src_code = optimize_validate_ec_point(src_code)
     src_code = replace_sol_success(src_code)
     # Optimize body
     src_code = proof_mem_to_calldata(src_code)
     src_code = summarize_validate_point_blocks(src_code)
+    src_code = remove_transcript_var(src_code)
 
     target_fp = f'src/{NAME}.sol'
     with open(target_fp, 'w') as f:
