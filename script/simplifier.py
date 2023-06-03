@@ -102,7 +102,33 @@ def summarize_validate_point_blocks(src_code):
             \}'''),
             m.group(0)
         )]
-        for m in blocks:
+
+        # Validate offsets
+        for a, b in zip(blocks[:-1], blocks[1:]):
+            a1, a2, a3, a4 = hexs_to_ints(a.groups())
+            b1, b2, b3, b4 = hexs_to_ints(b.groups())
+            assert a1 + 0x40 == b1
+            assert a2 + 0x40 == b2
+            assert a3 + 0x40 == b3
+            assert a4 + 0x40 == b4
+
+        for block in blocks:
+            a1, a2, a3, a4 = hexs_to_ints(block.groups())
+            assert a1 + 0x20 == a3
+            assert a2 + 0x20 == a4
+
+        start_cd1, start_mem1, start_cd2, _ = hexs_to_ints(blocks[0].groups())
+        last_cd, _, _, _ = hexs_to_ints(blocks[-1].groups())
+        end_cd = last_cd + 0x40
+
+        return f'''
+            for {{ let ptr := 0x{start_cd1:x} }} lt(ptr, 0x{end_cd:x}) {{ ptr := add(ptr, 0x40) }} {{
+                let x := calldataload(add(proof.offset, ptr))
+                let y := calldataload(add(proof.offset, add(ptr, 0x20)))
+                success := and(validate_ec_point(x, y), success)
+            }}
+            calldatacopy(add(transcript, 0x{start_mem1:x}), add(proof.offset, 0x{start_cd1:x}), 0x{len(blocks) * 0x40:x})
+        '''
 
     return re.sub(
         snippet_to_pattern(r'''
@@ -125,8 +151,9 @@ NAME = 'SimplifiedVerifier'
 
 def main():
     with open('src/VerifierApp.sol', 'r') as f:
-        src_code = f.read()
+        orig_src_code = f.read()
 
+    src_code = orig_src_code
     # Rename
     src_code = safe_replace(src_code, 'VerifierApp', NAME)
     # Optimize start/end
@@ -149,7 +176,11 @@ def main():
     with open(target_fp, 'r') as f:
         src_code = f.read()
 
-    print(f'Total lines: {len(src_code.splitlines()):,}')
+    diff = count_lines(src_code) - count_lines(orig_src_code)
+    pct = count_lines(src_code) / count_lines(orig_src_code) - 1
+    print(
+        f'Total lines: {count_lines(src_code):,} ({sign(pct)}{abs(pct):.2%}   lines: {sign(diff)}{abs(diff):,})'
+    )
 
 
 if __name__ == '__main__':

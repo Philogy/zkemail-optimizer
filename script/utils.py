@@ -96,3 +96,19 @@ def index_lines(src_code):
 
 def replace_section(src_code, start, end, s):
     return src_code[:start] + s + src_code[end:]
+
+
+def hexs_to_ints(hexs):
+    return map(lambda x: int(x, 16), hexs)
+
+
+def count_lines(src_code):
+    return len(src_code.splitlines())
+
+
+def sign(x: float):
+    if x == 0:
+        return ''
+    if x > 0:
+        return '+'
+    return '-'
