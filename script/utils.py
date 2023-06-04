@@ -42,36 +42,6 @@ def remove(src_code, s):
     return safe_replace(src_code, s, '', 1)
 
 
-OPEN_CURLY = chr(123)
-CLOSE_CURLY = chr(125)
-
-counter_brackets = {
-    chr(41): chr(40),
-    CLOSE_CURLY: OPEN_CURLY,
-    chr(93): chr(91)
-}
-open_brackets = set(counter_brackets.values())
-
-
-def parse_brackets(src):
-    bracket_stack = []
-    bracket_open_close = dict()
-    bracket_close_open = dict()
-
-    for i, char in enumerate(src):
-        if char in open_brackets:
-            bracket_stack.append((char, i))
-        elif char in counter_brackets:
-            opposite_char, pos = bracket_stack.pop()
-            assert counter_brackets[char] == opposite_char, f'Bracket mismatch'
-            bracket_open_close[pos] = i
-            bracket_close_open[i] = pos
-
-    assert not bracket_stack, f'Not all brackets matched ({len(bracket_stack)})'
-
-    return bracket_open_close, bracket_close_open
-
-
 def clean(s):
     return ' '.join(s.split()).strip()
 

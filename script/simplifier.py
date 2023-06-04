@@ -3,6 +3,7 @@ import json
 import pyperclip
 import subprocess
 from utils import *
+from enum import Enum
 
 
 def simplify_pub_inputs(src_code: str):
@@ -203,7 +204,6 @@ def summarize_constants(src_code):
 
 def remove_redundant_success_check(src_code):
     call_pattern = r'eq\(staticcall\(gas\(\), (0x[0-9a-f]+), (0x[0-9a-f]+), (0x[0-9a-f]+), (0x[0-9a-f]+), (0x[0-9a-f]+)\), 1\)'
-    instances = [*re.finditer(call_pattern, src_code)]
     src_code = re.sub(
         call_pattern,
         lambda m: f'staticcall(gas(), {m.group(1)}, {m.group(2)}, {m.group(3)}, {m.group(4)}, {m.group(5)})',
@@ -252,15 +252,6 @@ def main():
     print(f'Wrote simplified to {target_fp}')
     subprocess.run(['forge', 'fmt'])
     print(f'Ran `forge fmt`')
-
-    with open(target_fp, 'r') as f:
-        src_code = f.read()
-
-    diff = count_lines(src_code) - count_lines(orig_src_code)
-    pct = count_lines(src_code) / count_lines(orig_src_code) - 1
-    print(
-        f'Total lines: {count_lines(src_code):,} ({sign(pct)}{abs(pct):.2%}   lines: {sign(diff)}{abs(diff):,})'
-    )
 
 
 if __name__ == '__main__':
