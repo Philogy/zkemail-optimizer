@@ -58,7 +58,6 @@ ASM_START = f'assembly {OPEN_CURLY}\n'
 
 def replace_sol_success(src_code):
     src_code = remove(src_code, 'bool success = true;')
-    src_code = insert_after(src_code, ASM_START, 'let success := 1\n')
     src_code = safe_replace(
         src_code,
         f'{CLOSE_CURLY}\n        return success;\n',
@@ -67,9 +66,7 @@ def replace_sol_success(src_code):
     return src_code
 
 
-def proof_mem_repl(m: re.Match) -> str:
-    ptr = int(m.group(1), 16)
-    return f'calldataload(add(proof.offset, 0x{ptr - 0x20:02x}))'
+PROOF_OFFSET = 0x64
 
 
 def proof_mem_to_calldata(src_code):
@@ -78,6 +75,16 @@ def proof_mem_to_calldata(src_code):
         'bytes memory proof',
         'bytes calldata proof'
     )
+    src_code = insert_after(
+        src_code,
+        ASM_START,
+        f'let success := eq(proof.offset, 0x{PROOF_OFFSET:x})'
+    )
+
+    def proof_mem_repl(m: re.Match) -> str:
+        ptr = int(m.group(1), 16)
+        return f'calldataload(0x{PROOF_OFFSET + ptr - 0x20:x})'
+
     src_code = re.sub(
         r'mload\(add\(proof, 0x([0-9a-f]{2,})\)\)',
         proof_mem_repl,
@@ -94,9 +101,9 @@ def summarize_validate_point_blocks(src_code):
         blocks = [*re.finditer(
             snippet_to_pattern(r'''
            \{
-                let x := calldataload\(add\(proof.offset, 0x([0-9a-f]{2,})\)\)
+                let x := calldataload\(0x([0-9a-f]{2,})\)
                 mstore\(add\(transcript, 0x([0-9a-f]{2,})\), x\)
-                let y := calldataload\(add\(proof.offset, 0x([0-9a-f]{2,})\)\)
+                let y := calldataload\(0x([0-9a-f]{2,})\)
                 mstore\(add\(transcript, 0x([0-9a-f]{2,})\), y\)
                 success := and\(validate_ec_point\(x, y\), success\)
             \}'''),
@@ -117,25 +124,25 @@ def summarize_validate_point_blocks(src_code):
             assert a1 + 0x20 == a3
             assert a2 + 0x20 == a4
 
-        start_cd1, start_mem1, start_cd2, _ = hexs_to_ints(blocks[0].groups())
+        start_cd1, start_mem1, _, _ = hexs_to_ints(blocks[0].groups())
         last_cd, _, _, _ = hexs_to_ints(blocks[-1].groups())
         end_cd = last_cd + 0x40
 
         return f'''
             for {{ let ptr := 0x{start_cd1:x} }} lt(ptr, 0x{end_cd:x}) {{ ptr := add(ptr, 0x40) }} {{
-                let x := calldataload(add(proof.offset, ptr))
-                let y := calldataload(add(proof.offset, add(ptr, 0x20)))
+                let x := calldataload(ptr)
+                let y := calldataload(add(ptr, 0x20))
                 success := and(validate_ec_point(x, y), success)
             }}
-            calldatacopy(add(transcript, 0x{start_mem1:x}), add(proof.offset, 0x{start_cd1:x}), 0x{len(blocks) * 0x40:x})
+            calldatacopy(add(transcript, 0x{start_mem1:x}), 0x{PROOF_OFFSET + start_cd1:x}, 0x{len(blocks) * 0x40:x})
         '''
 
     return re.sub(
         snippet_to_pattern(r'''
                                (\{
-                let x := calldataload\(add\(proof.offset, 0x([0-9a-f]{2,})\)\)
+                let x := calldataload\(0x([0-9a-f]{2,})\)
                 mstore\(add\(transcript, 0x([0-9a-f]{2,})\), x\)
-                let y := calldataload\(add\(proof.offset, 0x([0-9a-f]{2,})\)\)
+                let y := calldataload\(0x([0-9a-f]{2,})\)
                 mstore\(add\(transcript, 0x([0-9a-f]{2,})\), y\)
                 success := and\(validate_ec_point\(x, y\), success\)
             \}
@@ -155,7 +162,7 @@ def remove_transcript_var(src_code):
 
 
 def summarize_simple_range_checks(src_code):
-    range_check_pattern = r'mstore\(0x([0-9a-f]+), mod\(calldataload\(add\(proof.offset, 0x([0-9a-f]+)\)\), f_q\)\)'
+    range_check_pattern = r'mstore\(0x([0-9a-f]+), mod\(calldataload\(0x([0-9a-f]+)\), f_q\)\)'
     blocks_pattern = snippet_to_pattern(r'(' + range_check_pattern + r'\s*)+')
     range_check_blocks = [*re.finditer(blocks_pattern, src_code)]
     assert len(range_check_blocks) == 1, 'Expected only 1 range check group'
@@ -174,15 +181,35 @@ def summarize_simple_range_checks(src_code):
 
         return f'''
             for {{
-                let ptr := add(proof.offset, 0x{start_cd:x})
-                let endPtr := add(ptr, 0x{0x20 * len(range_checks):x})
+                let ptr := 0x{start_cd:x}
+                let endPtr := 0x{start_cd + 0x20 * len(range_checks):x}
             }} lt(ptr, endPtr) {{ ptr := add(ptr, 0x20)}} {{
                 success := and(success, lt(calldataload(ptr), f_q))
             }}
-            calldatacopy(0x{start_mem:x}, add(proof.offset, 0x{start_cd:x}), 0x{0x20 * len(range_checks):x})
+            calldatacopy(0x{start_mem:x}, 0x{start_cd:x}, 0x{0x20 * len(range_checks):x})
         '''
 
     return re.sub(blocks_pattern, replace_block, src_code)
+
+
+F_Q = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001
+F_Q_VARNAME = 'f_q'
+
+
+def summarize_constants(src_code):
+    check_contains(src_code, f'let {F_Q_VARNAME} := 0x{F_Q:x}')
+    return re.sub(str(F_Q), F_Q_VARNAME, src_code)
+
+
+def remove_redundant_success_check(src_code):
+    call_pattern = r'eq\(staticcall\(gas\(\), (0x[0-9a-f]+), (0x[0-9a-f]+), (0x[0-9a-f]+), (0x[0-9a-f]+), (0x[0-9a-f]+)\), 1\)'
+    instances = [*re.finditer(call_pattern, src_code)]
+    src_code = re.sub(
+        call_pattern,
+        lambda m: f'staticcall(gas(), {m.group(1)}, {m.group(2)}, {m.group(3)}, {m.group(4)}, {m.group(5)})',
+        src_code
+    )
+    return src_code
 
 
 NAME = 'SimplifiedVerifier'
@@ -201,8 +228,7 @@ def main():
     src_code = insert_after(
         src_code,
         ASM_START,
-        '''
-            mstore(0x00, 0)
+        '''mstore(0x00, 0)
             mstore(0x20, 0)
             mstore(0x40, 0)
             mstore(0x60, 0)
@@ -216,6 +242,8 @@ def main():
     src_code = summarize_validate_point_blocks(src_code)
     src_code = remove_transcript_var(src_code)
     src_code = summarize_simple_range_checks(src_code)
+    src_code = summarize_constants(src_code)
+    src_code = remove_redundant_success_check(src_code)
 
     target_fp = f'src/{NAME}.sol'
     with open(target_fp, 'w') as f:
