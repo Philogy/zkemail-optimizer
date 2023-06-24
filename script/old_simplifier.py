@@ -1,9 +1,7 @@
 import re
-import json
-import pyperclip
 import subprocess
 from utils import *
-from enum import Enum
+from parsing import *
 
 
 def simplify_pub_inputs(src_code: str):
@@ -58,7 +56,7 @@ ASM_START = f'assembly {OPEN_CURLY}\n'
 
 
 def replace_sol_success(src_code):
-    src_code = remove(src_code, 'bool success = true;')
+    src_code = safe_remove(src_code, 'bool success = true;')
     src_code = safe_replace(
         src_code,
         f'{CLOSE_CURLY}\n        return success;\n',
@@ -216,15 +214,15 @@ NAME = 'SimplifiedVerifier'
 
 
 def main():
-    with open('src/VerifierApp.sol', 'r') as f:
+    with open('src/Verifier.sol', 'r') as f:
         orig_src_code = f.read()
 
     src_code = orig_src_code
     # Rename
-    src_code = safe_replace(src_code, 'VerifierApp', NAME)
+    src_code = safe_replace(src_code, 'Verifier', NAME)
     # Optimize start/end
     src_code = safe_replace(src_code, 'public', 'external')
-    src_code = remove(src_code, 'bytes32[5707] memory transcript;')
+    src_code = safe_remove(src_code, 'bytes32[7878] memory transcript;')
     src_code = insert_after(
         src_code,
         ASM_START,
